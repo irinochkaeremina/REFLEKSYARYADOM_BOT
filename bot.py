@@ -152,15 +152,27 @@ async def ping_self():
             logger.error(f"Ошибка автопинга: {e}")
         await asyncio.sleep(300)  # 5 минут
 
+# ===== Запуск бота =====
 async def run_bot():
+    # Создаём таблицу в базе, если её нет
     init_db()
+    
+    # Собираем приложение Telegram
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
-    # -- ДОБАВЛЯЕМ АВТОПИНГ --
-    asyncio.get_event_loop().create_task(ping_self())
-    # ------------------------
+    # Запускаем автопинг (если задан RENDER_URL)
+    asyncio.create_task(ping_self())
     
     logger.info("Бот запущен")
+    # Запускаем polling (ожидание сообщений)
     await app.run_polling(allowed_updates=Update.ALL_TYPES)
+
+
+if __name__ == "__main__":
+    # Запускаем Flask в отдельном потоке для health-check
+    threading.Thread(target=run_flask, daemon=True).start()
+    
+    # Запускаем основную асинхронную функцию бота
+    asyncio.run(run_bot())
