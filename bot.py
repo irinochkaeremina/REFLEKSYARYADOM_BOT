@@ -136,15 +136,15 @@ def run_flask():
     port = int(os.environ.get("PORT", 5000))
     flask_app.run(host="0.0.0.0", port=port, use_reloader=False)
 
-# ===== Запуск бота =====
-def run_bot():
+async def run_bot():
     init_db()
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    
+    # -- ДОБАВЛЯЕМ АВТОПИНГ --
+    asyncio.get_event_loop().create_task(ping_self())
+    # ------------------------
+    
     logger.info("Бот запущен")
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
-
-if __name__ == "__main__":
-    threading.Thread(target=run_flask, daemon=True).start()
-    asyncio.run(run_bot())
+    await app.run_polling(allowed_updates=Update.ALL_TYPES)
