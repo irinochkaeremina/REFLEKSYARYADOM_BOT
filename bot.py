@@ -153,7 +153,8 @@ async def ping_self():
         await asyncio.sleep(300)  # 5 минут
 
 # ===== Запуск бота =====
-async def run_bot():
+# ===== Запуск бота =====
+def run_bot():
     # Создаём таблицу в базе, если её нет
     init_db()
     
@@ -162,17 +163,19 @@ async def run_bot():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
-    # Запускаем автопинг (если задан RENDER_URL)
-    asyncio.create_task(ping_self())
+    # Запускаем автопинг в отдельном потоке, чтобы не мешать основному
+    def start_ping():
+        asyncio.run(ping_self())
+    threading.Thread(target=start_ping, daemon=True).start()
     
     logger.info("Бот запущен")
-    # Запускаем polling (ожидание сообщений)
-    await app.run_polling(allowed_updates=Update.ALL_TYPES)
+    # Запускаем polling (синхронно, блокирует поток, но это нормально)
+    app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
 if __name__ == "__main__":
-    # Запускаем Flask в отдельном потоке для health-check
+    # Запускаем Flask для health-check в отдельном потоке
     threading.Thread(target=run_flask, daemon=True).start()
     
-    # Запускаем основную асинхронную функцию бота
-    asyncio.run(run_bot())
+    # Запускаем бота (синхронно)
+    run_bot()
