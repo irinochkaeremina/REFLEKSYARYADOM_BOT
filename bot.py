@@ -3,6 +3,7 @@ import json
 import asyncio
 import threading
 import logging
+import requests
 
 import psycopg2
 from flask import Flask
@@ -135,6 +136,21 @@ def health():
 def run_flask():
     port = int(os.environ.get("PORT", 5000))
     flask_app.run(host="0.0.0.0", port=port, use_reloader=False)
+
+import requests  # Убедись, что импорт есть в начале файла
+
+async def ping_self():
+    url = os.getenv("RENDER_URL")
+    if not url:
+        return
+    while True:
+        try:
+            # Делаем синхронный запрос в отдельном потоке, чтобы не блокировать бота
+            await asyncio.to_thread(requests.get, url, timeout=10)
+            logger.info("Автопинг успешен")
+        except Exception as e:
+            logger.error(f"Ошибка автопинга: {e}")
+        await asyncio.sleep(300)  # 5 минут
 
 async def run_bot():
     init_db()
